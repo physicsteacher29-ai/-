@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>آزمون تطبیقی فیزیک</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: Tahoma, Arial, sans-serif;
+            background: linear-gradient(135deg, #f0f2f5 0%, #e0e7ff 100%);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .quiz-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            max-width: 750px;
+            width: 100%;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .level-badge {
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+        }
+        .level-easy   { background-color: #28a745; }
+        .level-medium { background-color: #f0ad4e; }
+        .level-hard   { background-color: #d9534f; }
+
+        .counter {
+            font-size: 14px;
+            color: #666;
+            background: #f0f2f5;
+            padding: 5px 12px;
+            border-radius: 15px;
+        }
+
+        .question-text {
+            font-size: 17px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            color: #222;
+        }
+
+        .question-figure {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #fafbff;
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .option-btn {
+            padding: 14px 18px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: #fafafa;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: right;
+            font-family: inherit;
+        }
+        .option-btn:hover:not(:disabled) {
+            background: #e9ecef;
+            border-color: #007bff;
+            transform: translateX(-3px);
+        }
+        .option-btn.correct {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+            font-weight: bold;
+        }
+        .option-btn.wrong {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .option-btn:disabled { cursor: not-allowed; }
+
+        .feedback {
+            margin-top: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+        .feedback.correct { color: #28a745; }
+        .feedback.wrong { color: #dc3545; }
+
+        .solution-box {
+            display: none;
+            margin-top: 20px;
+            padding: 18px 22px;
+            background: #eef6ff;
+            border-right: 5px solid #007bff;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 2;
+            color: #333;
+        }
+        .solution-box h4 {
+            margin: 0 0 12px 0;
+            color: #007bff;
+            font-size: 16px;
+        }
+        .solution-box.show { display: block; animation: fadeIn 0.4s; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .next-btn {
+            display: none;
+            margin-top: 20px;
+            padding: 12px 28px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .next-btn:hover { background: #0056b3; }
+        .next-btn.show { display: inline-block; }
+
+        .finished {
+            text-align: center;
+            padding: 20px;
+        }
+        .finished h2 { color: #28a745; font-size: 24px; }
+        .finished p { font-size: 16px; color: #555; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container" id="quizContainer">
+    <div class="top-bar">
+        <div id="levelBadge" class="level-badge level-easy">سطح: آسان</div>
+        <div id="counter" class="counter"></div>
+    </div>
+    <div id="questionText" class="question-text"></div>
+    <div id="questionFigure" class="question-figure"></div>
+    <div id="optionsContainer" class="options"></div>
+    <div id="feedback" class="feedback"></div>
+
+    <div id="solutionBox" class="solution-box">
+        <h4>📘 راهنمای حل:</h4>
+        <div id="solutionText"></div>
+    </div>
+
+    <button id="nextBtn" class="next-btn">سوال بعدی ➡</button>
+</div>
+
+<script>
+// ================== شکل‌ها (HTML/SVG) ==================
+
+// شکل ظرف آب (سوال مساحت کف)
+const figureWaterTank = `
+    <svg width="440" height="180" viewBox="0 0 440 180" xmlns="http://www.w3.org/2000/svg">
+        <!-- ظرف اول -->
+        <rect x="30" y="30" width="120" height="120" fill="none" stroke="#007bff" stroke-width="3"/>
+        <rect x="30" y="60" width="120" height="90" fill="#a8d5ff" opacity="0.8"/>
+        <text x="90" y="115" text-anchor="middle" font-size="16" font-family="Tahoma" fill="#003366">آب</text>
+        <!-- فلش ارتفاع ۳۰cm -->
+        <line x1="170" y1="60" x2="170" y2="150" stroke="#d9534f" stroke-width="2" marker-start="url(#arrowUp)" marker-end="url(#arrowDown)"/>
+        <text x="185" y="110" font-size="14" font-family="Tahoma" fill="#d9534f">۳۰ cm</text>
+        <!-- براکت مساحت -->
+        <line x1="30" y1="165" x2="150" y2="165" stroke="#333" stroke-width="2"/>
+        <line x1="30" y1="160" x2="30" y2="170" stroke="#333" stroke-width="2"/>
+        <line x1="150" y1="160" x2="150" y2="170" stroke="#333" stroke-width="2"/>
+        <text x="90" y="178" text-anchor="middle" font-size="14" font-family="Tahoma" fill="#333">A = ?</text>
+
+        <!-- ظرف دوم -->
+        <rect x="270" y="30" width="120" height="120" fill="none" stroke="#007bff" stroke-width="3"/>
+        <rect x="270" y="50" width="120" height="100" fill="#a8d5ff" opacity="0.8"/>
+        <!-- جسم داخل آب -->
+        <rect x="310" y="120" width="40" height="30" fill="#ffd966" stroke="#bf9000" stroke-width="2"/>
+        <!-- فلش ارتفاع ۳۲cm -->
+        <line x1="410" y1="50" x2="410" y2="150" stroke="#d9534f" stroke-width="2"/>
+        <text x="425" y="105" font-size="14" font-family="Tahoma" fill="#d9534f">۳۲ cm</text>
+    </svg>
+`;
+
+// شکل خط‌کش و نمایشگر دیجیتال (سوال خطای وسیله)
+const figureRulerDigital = `
+    <svg width="440" height="150" viewBox="0 0 440 150" xmlns="http://www.w3.org/2000/svg">
+        <!-- خط‌کش (الف) -->
+        <rect x="20" y="30" width="180" height="40" fill="#fef9e7" stroke="#333" stroke-width="2"/>
+        <!-- درجه‌بندی‌ها -->
+        <line x1="20" y1="30" x2="20" y2="45" stroke="#333" stroke-width="2"/>
+        <line x1="65" y1="30" x2="65" y2="45" stroke="#333" stroke-width="2"/>
+        <line x1="110" y1="30" x2="110" y2="45" stroke="#333" stroke-width="2"/>
+        <line x1="155" y1="30" x2="155" y2="45" stroke="#333" stroke-width="2"/>
+        <line x1="200" y1="30" x2="200" y2="45" stroke="#333" stroke-width="2"/>
+        <!-- زیر درجه‌ها -->
+        <line x1="42" y1="30" x2="42" y2="40" stroke="#333" stroke-width="1.5"/>
+        <line x1="87" y1="30" x2="87" y2="40" stroke="#333" stroke-width="1.5"/>
+        <line x1="132" y1="30" x2="132" y2="40" stroke="#333" stroke-width="1.5"/>
+        <line x1="177" y1="30" x2="177" y2="40" stroke="#333" stroke-width="1.5"/>
+        <!-- اعداد -->
+        <text x="20" y="25" text-anchor="middle" font-size="13" font-family="Tahoma" fill="#333">۰</text>
+        <text x="65" y="25" text-anchor="middle" font-size="13" font-family="Tahoma" fill="#333">۱</text>
+        <text x="110" y="25" text-anchor="middle" font-size="13" font-family="Tahoma" fill="#333">۲</text>
+        <text x="155" y="25" text-anchor="middle" font-size="13" font-family="Tahoma" fill="#333">۳</text>
+        <text x="200" y="25" text-anchor="middle" font-size="13" font-family="Tahoma" fill="#333">۴</text>
+        <text x="100" y="95" text-anchor="middle" font-size="14" font-family="Tahoma" fill="#333">cm</text>
+        <text x="110" y="120" text-anchor="middle" font-size="13" font-family="Tahoma" fill="#007bff">(الف)</text>
+
+        <!-- نمایشگر دیجیتال (ب) -->
+        <rect x="250" y="25" width="160" height="65" fill="#e8e8e8" stroke="#555" stroke-width="3" rx="5"/>
+        <rect x="265" y="38" width="130" height="40" fill="#1a1a1a" rx="3"/>
+        <text x="330" y="70" text-anchor="middle" font-size="28" font-family="Courier New, monospace" fill="#00ff88" font-weight="bold">02.3</text>
+        <text x="395" y="82" font-size="12" font-family="Tahoma" fill="#333">cm</text>
+        <text x="330" y="120" text-anchor="middle" font-size="13" font-family="Tahoma" fill="#007bff">(ب)</text>
+    </svg>
+`;
+
+// ================== بانک سوالات ==================
+const questions = [
+    // ---------- سطح آسان ----------
+    {
+        level: 'easy',
+        text: 'در کدام‌یک از موارد زیر، همه کمیت‌ها فرعی و نرده‌ای هستند؟',
+        options: [
+            'جرم - زمان - فشار',
+            'چگالی - تندی - انرژی',
+            'چگالی - نیرو - حجم',
+            'شدت روشنایی - زمان - جرم'
+        ],
+        correct: 1,
+        solution: `
+            کمیت‌های اصلی عبارتند از: طول - جرم - زمان - جریان الکتریکی - دما - مقدار ماده - شدت روشنایی.<br>
+            این کمیت‌ها همگی نرده‌ای هستند.<br><br>
+            <b>بررسی گزینه‌ها:</b><br>
+            ۱) جرم و زمان اصلی‌اند → نادرست<br>
+            ۲) چگالی، تندی و انرژی همه فرعی و نرده‌ای هستند → <b>درست ✅</b><br>
+            ۳) چگالی و حجم فرعی‌اند ولی نیرو برداری است → نادرست<br>
+            ۴) جرم و زمان اصلی‌اند → نادرست<br><br>
+            ✅ پاسخ صحیح: گزینه <b>۲</b>
+        `
+    },
+    {
+        level: 'easy',
+        text: 'کدام دسته از کمیت‌های زیر، همگی اصلی هستند؟',
+        options: [
+            'جرم - وزن - طول - شدت جریان الکتریکی',
+            'جرم - زمان - دما - سرعت',
+            'جرم - دما - طول - جریان الکتریکی',
+            'جرم - زمان - مساحت - شدت روشنایی'
+        ],
+        correct: 2,
+        solution: `
+            طبق کتاب درسی، هفت کمیت اصلی عبارتند از:<br>
+            طول، جرم، زمان، دما، مقدار ماده، جریان الکتریکی (شدت)، شدت روشنایی.<br><br>
+            <b>بررسی گزینه‌ها:</b><br>
+            ۱) وزن اصلی نیست (فرعی است) → نادرست<br>
+            ۲) سرعت فرعی است → نادرست<br>
+            ۳) جرم، دما، طول و جریان الکتریکی همه اصلی هستند → <b>درست ✅</b><br>
+            ۴) مساحت فرعی است → نادرست<br><br>
+            ✅ پاسخ صحیح: گزینه <b>۳</b>
+        `
+    },
+
+    // ---------- سطح متوسط ----------
+    {
+        level: 'medium',
+        text: 'درختی در ۲۰ شبانه‌روز به مقدار ۰/۰۹ متر رشد می‌کند. آهنگ رشد این درخت چند سانتی‌متر بر ساعت است؟',
+        options: ['۳/۸۰۰', '۳/۸۰۰۰', '۳/۱۶۰', '۳/۱۶۰۰۰'],
+        correct: 2,
+        solution: `
+            <b>گام ۱:</b> آهنگ رشد = مقدار رشد ÷ زمان رشد<br>
+            آهنگ رشد = ۰/۰۹ m ÷ ۲۰ شبانه‌روز<br><br>
+            
+            <b>گام ۲:</b> تبدیل واحدها:<br>
+            ۰/۰۹ m = ۹ cm<br>
+            ۲۰ شبانه‌روز = ۲۰ × ۲۴ = ۴۸۰ ساعت<br><br>
+            
+            <b>گام ۳:</b> محاسبه:<br>
+            آهنگ = ۹ ÷ ۴۸۰ = ۳/۱۶۰ cm/h<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۳/۱۶۰</b>
+        `
+    },
+    {
+        level: 'medium',
+        text: 'فاصله تهران تا شیراز تقریباً ۹۷۶/۵ کیلومتر است. این فاصله برحسب فرسنگ کدام است؟ (هر فرسنگ برابر ۶۰۰۰ ذرع و هر ذرع برابر ۱۰۵ cm در نظر بگیرید.)',
+        options: ['۱۵', '۶۳', '۱۵۵', '۶۳۵'],
+        correct: 2,
+        solution: `
+            <b>گام ۱:</b> تبدیل فاصله به متر:<br>
+            ۹۷۶/۵ km = ۹۷۶/۵ × ۱۰³ m<br><br>
+            
+            <b>گام ۲:</b> محاسبه طول یک فرسنگ برحسب متر:<br>
+            ۱ فرسنگ = ۶۰۰۰ ذرع = ۶۰۰۰ × (۱۰۵/۱۰۰) m = ۶۳۰۰ m<br><br>
+            
+            <b>گام ۳:</b> تقسیم فاصله بر طول یک فرسنگ:<br>
+            تعداد فرسنگ = (۹۷۶/۵ × ۱۰³) ÷ ۶۳۰۰<br>
+            = ۹۷۶۵۰۰ ÷ ۶۳۰۰ = ۱۵۵<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۱۵۵</b>
+        `
+    },
+    {
+        level: 'medium',
+        text: 'چه تعداد از گزاره‌های زیر درست است؟<br>الف) در مدل‌سازی سقوط یک ورقه کاغذی، می‌توان از مقاومت هوا صرف‌نظر کرد.<br>ب) علم فیزیک، یک علم تجربی است که نظریه‌های آن همواره معتبرند.<br>پ) هر ۱ mg/cm³ برابر با ۱ kg/m³ است.<br>ت) یکای کمیت اصلی دما در SI، درجه سانتی‌گراد است.',
+        options: ['۲', '۱', '۳', 'صفر'],
+        correct: 1,
+        solution: `
+            <b>الف)</b> نادرست — در سقوط ورقه کاغذ، مقاومت هوا مهم است.<br><br>
+            
+            <b>ب)</b> نادرست — نظریه‌های فیزیک همیشه معتبر نیستند.<br><br>
+            
+            <b>پ)</b> نادرست — ۱ mg/cm³ = ۱۰⁻³ g/cm³ = ۱ kg/m³ ✔️ (این مورد درست است)<br><br>
+            
+            <b>ت)</b> نادرست — یکای اصلی دما در SI، کلوین است نه سانتی‌گراد.<br><br>
+            
+            پس فقط مورد «پ» درست است → تعداد = ۱<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۱</b>
+        `
+    },
+    {
+        level: 'medium',
+        text: 'طول خطوط انتقال نفت خام، گاز و سایر فراورده‌های سوختی در ایران حدود ۳/۸۹ × ۱۰⁴ km است. این طول برحسب میلی‌متر کدام است؟',
+        options: ['۳/۸۹ × ۱۰⁷', '۳/۸۹ × ۱۰¹⁰', '۳/۸۹ × ۱۰¹²', '۳/۸۹ × ۱۰¹³'],
+        correct: 1,
+        solution: `
+            <b>گام ۱:</b> تبدیل کیلومتر به متر (× ۱۰³):<br>
+            ۳/۸۹ × ۱۰⁴ km = ۳/۸۹ × ۱۰⁷ m<br><br>
+            
+            <b>گام ۲:</b> تبدیل متر به میلی‌متر (× ۱۰³):<br>
+            ۳/۸۹ × ۱۰⁷ m = ۳/۸۹ × ۱۰¹⁰ mm<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۳/۸۹ × ۱۰¹⁰</b>
+        `
+    },
+    {
+        level: 'medium',
+        text: 'در مدل‌سازی پرتاب یک توپ بسکتبال، از کدام اثر نمی‌توان صرف‌نظر کرد؟',
+        options: [
+            'درزها و برجستگی‌های روی توپ',
+            'چرخش توپ به دور خودش',
+            'نیروی گرانش وارد بر توپ',
+            'نیروی مقاومت هوا'
+        ],
+        correct: 2,
+        solution: `
+            در مدل‌سازی می‌توان از اثرهایی که تأثیر چندانی ندارند صرف‌نظر کرد. اما:<br><br>
+            
+            <b>بررسی گزینه‌ها:</b><br>
+            ۱) درزها و برجستگی‌ها → تأثیر جزئی، قابل صرف‌نظر<br>
+            ۲) چرخش توپ → در مدل‌های ساده قابل صرف‌نظر<br>
+            ۳) نیروی گرانش → اثر اصلی و تعیین‌کننده حرکت توپ → <b>نمی‌توان صرف‌نظر کرد ✅</b><br>
+            ۴) مقاومت هوا → در بررسی‌های دقیق‌تر لحاظ می‌شود<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>نیروی گرانش وارد بر توپ</b>
+        `
+    },
+    {
+        level: 'medium',
+        text: 'با توجه به شکل زیر، خطای وسیله «الف» و «ب» به‌ترتیب از راست به چپ کدام است؟',
+        options: [
+            '±۰/۱cm و ±۰/۵cm',
+            '±۰/۵cm و ±۰/۲۵cm',
+            '±۰/۱cm و ±۰/۳cm',
+            '±۰/۵cm و ±۰/۳cm'
+        ],
+        correct: 0,
+        figure: figureRulerDigital,
+        solution: `
+            <b>قاعده کلی:</b> خطای اندازه‌گیری با وسایل مدرج = ± ۱/۲ کمینه تقسیم‌بندی<br><br>
+            
+            <b>وسیله «الف» (خط‌کش):</b><br>
+            کمینه تقسیم‌بندی = ۰/۵ cm<br>
+            خطا = ± ۰/۵ ÷ ۲ = ± ۰/۲۵ ≈ ± ۰/۳ cm<br><br>
+            
+            <b>توجه:</b> در گزینه‌ها ±۰/۳cm آمده، پس خطای خط‌کش ≈ ±۰/۳ cm<br><br>
+            
+            <b>وسیله «ب» (دیجیتال):</b><br>
+            دقت دیجیتال = واحد آخرین رقم = ۰/۱ cm<br>
+            خطا = ± ۰/۱ cm<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>±۰/۱cm و ±۰/۳cm</b>
+        `
+    },
+    {
+        level: 'medium',
+        text: 'خطای کدام وسیله از همه کم‌تر است؟<br>(۱) خط‌کش با کمینه تقسیم ۰/۵cm<br>(۲) خط‌کش با کمینه تقسیم ۰/۲۵cm<br>(۳) دیجیتال ۲۱/۳۸۲ m<br>(۴) دیجیتال ۸۴/۲۱ cm',
+        options: [
+            'وسیله ۱',
+            'وسیله ۲',
+            'وسیله ۳',
+            'وسیله ۴'
+        ],
+        correct: 3,
+        solution: `
+            هرچه دقت یک وسیله بیشتر باشد، خطای آن کم‌تر خواهد بود.<br><br>
+            
+            <b>دقت هر وسیله:</b><br>
+            ۱) خط‌کش ۰/۵cm → دقت = ۰/۵ cm<br>
+            ۲) خط‌کش ۰/۲۵cm → دقت = ۰/۲۵ cm<br>
+            ۳) دیجیتال ۲۱/۳۸۲ m → دقت = ۰/۰۰۱ m = ۰/۱ cm<br>
+            ۴) دیجیتال ۸۴/۲۱ cm → دقت = ۰/۰۱ cm<br><br>
+            
+            کوچک‌ترین دقت = ۰/۰۱ cm → وسیله ۴ کم‌ترین خطا را دارد.<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۴</b>
+        `
+    },
+
+    // ---------- سطح دشوار ----------
+    {
+        level: 'hard',
+        text: 'در یک روز بارانی، ۲۰ میلی‌متر باران روی سطحی به مساحت ۲۵۰۰ کیلومتر مربع بارید. جرم این مقدار باران چند کیلوگرم است؟ (چگالی آب باران ۱/۰ g/cm³)',
+        options: ['۵/۰ × ۱۰⁷', '۵/۰ × ۱۰⁸', '۵/۰ × ۱۰⁹', '۵/۰ × ۱۰¹⁰'],
+        correct: 3,
+        solution: `
+            <b>گام ۱:</b> حجم باران = مساحت × ارتفاع<br>
+            ارتفاع = ۲۰ mm = ۰/۰۲ m<br>
+            مساحت = ۲۵۰۰ km² = ۲۵۰۰ × ۱۰⁶ m² = ۲/۵ × ۱۰⁹ m²<br>
+            حجم = ۲/۵ × ۱۰⁹ × ۰/۰۲ = ۵ × ۱۰⁷ m³<br><br>
+            
+            <b>گام ۲:</b> تبدیل به سانتی‌متر مکعب:<br>
+            ۱ m³ = ۱۰⁶ cm³<br>
+            حجم = ۵ × ۱۰⁷ × ۱۰⁶ = ۵ × ۱۰¹³ cm³<br><br>
+            
+            <b>گام ۳:</b> جرم = چگالی × حجم:<br>
+            جرم = ۱ × ۵ × ۱۰¹³ = ۵ × ۱۰¹³ g<br><br>
+            
+            <b>گام ۴:</b> تبدیل گرم به کیلوگرم:<br>
+            جرم = ۵ × ۱۰¹³ ÷ ۱۰³ = ۵ × ۱۰¹⁰ kg<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۵/۰ × ۱۰¹⁰</b>
+        `
+    },
+    {
+        level: 'hard',
+        text: 'جسم جامدی را گرم می‌کنیم. اگر حجم جسم در اثر انبساط ۱۰ درصد افزایش یابد، چگالی جسم تقریباً چگونه تغییر می‌کند؟',
+        options: [
+            '۹ درصد افزایش می‌یابد.',
+            '۹ درصد کاهش می‌یابد.',
+            '۲۵ درصد افزایش می‌یابد.',
+            '۲۵ درصد کاهش می‌یابد.'
+        ],
+        correct: 1,
+        solution: `
+            <b>گام ۱:</b> فرمول چگالی: ρ = m / V<br>
+            جرم ثابت است (فقط گرم شده)، پس ρ و V نسبت عکس دارند.<br><br>
+            
+            <b>گام ۲:</b> حجم جدید:<br>
+            V₂ = V₁ + ۰/۱ V₁ = ۱/۱ V₁<br><br>
+            
+            <b>گام ۳:</b> چگالی جدید:<br>
+            ρ₂ = m / V₂ = m / (۱/۱ V₁) = (۱ / ۱/۱) ρ₁ ≈ ۰/۹۰۹ ρ₁<br><br>
+            
+            <b>گام ۴:</b> درصد تغییر:<br>
+            کاهش = (۱ − ۰/۹۰۹) × ۱۰۰ ≈ <b>۹/۱٪ ≈ ۹٪</b><br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۹ درصد کاهش می‌یابد</b>
+        `
+    },
+    {
+        level: 'hard',
+        text: 'در شکل زیر اگر چگالی جسم داخل آب ۴۰۰۰ kg/m³ باشد، در صورتی که درون آب قرار گیرد، ارتفاع آب از ۳۰ cm به ۳۲ cm می‌رسد. اگر جرم جسم ۰/۲ kg باشد، مساحت کف ظرف چند واحد SI است؟',
+        options: ['۲۵', '۲۵ × ۱۰⁻⁴', '۴۰', '۴ × ۱۰⁻³'],
+        correct: 1,
+        figure: figureWaterTank,
+        solution: `
+            <b>گام ۱:</b> محاسبه حجم جسم از چگالی و جرم:<br>
+            ρ = ۴ g/cm³ (تبدیل از ۴۰۰۰ kg/m³)<br>
+            m = ۲۰۰ g<br>
+            V = m / ρ = ۲۰۰ / ۴ = ۵۰ cm³<br><br>
+            
+            <b>گام ۲:</b> حجم آب جابه‌جا شده = حجم جسم:<br>
+            V = A × Δh<br>
+            Δh = ۳۲ − ۳۰ = ۲ cm<br>
+            ۵۰ = A × ۲ → A = ۲۵ cm²<br><br>
+            
+            <b>گام ۳:</b> تبدیل به واحد SI (متر مربع):<br>
+            A = ۲۵ cm² = ۲۵ × ۱۰⁻⁴ m²<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۲۵ × ۱۰⁻⁴</b>
+        `
+    },
+    {
+        level: 'hard',
+        text: 'می‌خواهیم درون مکعبی یکنواخت به ضلع a که از فلزی به چگالی ۵ g/cm³ ساخته شده است، حفره‌ای مکعبی به ضلع a\' ایجاد کنیم. اگر نسبت a/a\' = ۲ باشد، چگالی جسم چند درصد و چگونه تغییر خواهد کرد؟',
+        options: [
+            '۱۲/۵ درصد کاهش می‌یابد.',
+            '۲۵ درصد کاهش می‌یابد.',
+            '۸۷/۵ درصد کاهش می‌یابد.',
+            '۷۵ درصد کاهش می‌یابد.'
+        ],
+        correct: 0,
+        solution: `
+            <b>گام ۱:</b> حجم کل مکعب اولیه: V = a³<br>
+            حجم حفره: V\' = (a\')³<br>
+            نسبت a/a\' = ۲ → a\' = a/۲ → V\' = a³/۸<br><br>
+            
+            <b>گام ۲:</b> جرم حذف شده:<br>
+            m\' = ρ × V\' = ۵ × a³/۸<br><br>
+            
+            <b>گام ۳:</b> جرم جدید:<br>
+            m₂ = ۵a³ − ۵a³/۸ = ۵a³(۷/۸) = ۳۵a³/۸<br><br>
+            
+            <b>گام ۴:</b> چگالی جدید:<br>
+            ρ₂ = m₂ / V = (۳۵a³/۸) / a³ = ۳۵/۸ = ۴/۳۷۵ g/cm³<br><br>
+            
+            <b>گام ۵:</b> درصد تغییر:<br>
+            (۴/۳۷۵ − ۵) / ۵ × ۱۰۰ = (−۰/۶۲۵/۵) × ۱۰۰ = <b>−۱۲/۵٪</b><br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۱۲/۵ درصد کاهش می‌یابد</b>
+        `
+    },
+    {
+        level: 'hard',
+        text: 'چه تعداد از عبارات زیر درست بیان شده است؟<br>الف) در مدل‌سازی سقوط یک برگ درخت، می‌توان از مقاومت هوا صرف‌نظر کرد.<br>ب) اختلاف پتانسیل الکتریکی، جرم و زمان از کمیت‌های اصلی هستند.<br>پ) دقت یک وسیله اندازه‌گیری دیجیتال، برابر با ۱ واحد از آخرین مرتبه‌ای است که نمایش می‌دهد.<br>ت) چگالی یک جسم همواره کوچک‌تر یا مساوی چگالی ماده سازنده آن جسم است.',
+        options: ['۴', '۳', '۲', '۱'],
+        correct: 3,
+        solution: `
+            <b>الف)</b> نادرست — در سقوط برگ، مقاومت هوا بسیار مهم است.<br><br>
+            
+            <b>ب)</b> نادرست — اختلاف پتانسیل الکتریکی کمیت اصلی نیست.<br><br>
+            
+            <b>پ)</b> درست — دقت وسیله دیجیتال = واحد آخرین رقم نمایش داده شده.<br><br>
+            
+            <b>ت)</b> درست — اگر جسم توپر باشد، چگالی جسم = چگالی ماده. اگر توخالی باشد، چگالی جسم کمتر از چگالی ماده است. پس همواره ≤ است.<br><br>
+            
+            پس موارد «پ» و «ت» درست هستند → تعداد = ۲<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۲</b>
+        `
+    },
+    {
+        level: 'hard',
+        text: '۳ لیتر از مایعی با چگالی ۲ g/cm³ را با ۸۰۰ g از مایعی با چگالی ۰/۸ g/cm³ مخلوط می‌کنیم. اگر چگالی مخلوط ۲ g/cm³ شود، کدام گزینه صحیح است؟',
+        options: [
+            'حجم مخلوط ۶۰۰ cm³ افزایش یافته است.',
+            'حجم مخلوط ۶۰۰ cm³ کاهش یافته است.',
+            'حجم مخلوط ۱۲۰۰ cm³ افزایش یافته است.',
+            'حجم مخلوط ۱۲۰۰ cm³ کاهش یافته است.'
+        ],
+        correct: 1,
+        solution: `
+            <b>گام ۱:</b> جرم و حجم مایع اول:<br>
+            V₁ = ۳ لیتر = ۳۰۰۰ cm³<br>
+            m₁ = ρ₁V₁ = ۲ × ۳۰۰۰ = ۶۰۰۰ g<br><br>
+            
+            <b>گام ۲:</b> حجم مایع دوم:<br>
+            V₂ = m₂ / ρ₂ = ۸۰۰ / ۰/۸ = ۱۰۰۰ cm³<br><br>
+            
+            <b>گام ۳:</b> رابطه چگالی مخلوط:<br>
+            ρ = (m₁+m₂) / (V₁+V₂+ΔV)<br>
+            ۲ = (۶۰۰۰+۸۰۰) / (۳۰۰۰+۱۰۰۰+ΔV)<br>
+            ۲ = ۶۸۰۰ / (۴۰۰۰+ΔV)<br>
+            ۸۰۰۰ + ۲ΔV = ۶۸۰۰<br>
+            ۲ΔV = −۱۲۰۰ → ΔV = −۶۰۰ cm³<br><br>
+            
+            علامت منفی یعنی حجم ۶۰۰ cm³ کاهش یافته است.<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>حجم مخلوط ۶۰۰ cm³ کاهش یافته است</b>
+        `
+    },
+    {
+        level: 'hard',
+        text: 'یک گوی آهنی به چگالی ۸ g/cm³ در اختیار داریم. چند درصد از حجم داخل آن را خالی کنیم، تا چگالی آن برابر با ۳ g/cm³ شود؟',
+        options: ['۱۲/۵', '۳۷/۵', '۶۲/۵', '۸۷/۵'],
+        correct: 2,
+        solution: `
+            <b>گام ۱:</b> با برداشتن فلز از داخل جسم، حجم آن تغییر نمی‌کند؛ اما جرم کم می‌شود. اگر به اندازه V₁ از حجم داخل جسم برداریم:<br><br>
+            
+            چگالی جدید = (m − ρV₁) / V = ۳<br><br>
+            
+            که در آن m = ρV = ۸V (جرم اولیه):<br>
+            (۸V − ۸V₁) / V = ۳<br>
+            ۸ − ۸(V₁/V) = ۳<br>
+            ۸(V₁/V) = ۵<br>
+            V₁/V = ۵/۸<br><br>
+            
+            <b>گام ۲:</b> درصد حجم خالی شده:<br>
+            (V₁/V) × ۱۰۰ = (۵/۸) × ۱۰۰ = ۶۲/۵٪<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۶۲/۵</b>
+        `
+    },
+    {
+        level: 'hard',
+        text: 'شیر آبی چکه می‌کند و آهنگ متوسط خروج آب از آن ۴۵ قطره در دقیقه است. اگر هر قطره حجمی برابر ۱۰۰ mm³ داشته باشد، آهنگ متوسط خروج آب چند لیتر بر ساعت است؟',
+        options: ['۰/۱۵', '۰/۰۱۵', '۰/۲۷', '۰/۰۲۷'],
+        correct: 2,
+        solution: `
+            <b>گام ۱:</b> حجم آب در یک دقیقه:<br>
+            V = n × V_قطره = ۴۵ × (۱۰۰ × ۱۰⁻³) = ۴/۵ cm³<br>
+            (چون ۱۰۰ mm³ = ۰/۱ cm³)<br><br>
+            
+            <b>گام ۲:</b> آهنگ خروج = ۴/۵ cm³/min<br><br>
+            
+            <b>گام ۳:</b> تبدیل به لیتر بر ساعت:<br>
+            ۴/۵ cm³/min = ۴/۵ × (۱ L / ۱۰۰۰ cm³) × (۶۰ min / ۱ h)<br>
+            = (۴/۵ × ۶۰) / ۱۰۰۰ = ۲۷۰ / ۱۰۰۰ = ۰/۲۷ L/h<br><br>
+            
+            ✅ پاسخ صحیح: گزینه <b>۰/۲۷</b>
+        `
+    }
+];
+
+// ================== وضعیت آزمون ==================
+const LEVELS = ['easy', 'medium', 'hard'];
+const LEVEL_NAMES = { easy: 'آسان', medium: 'متوسط', hard: 'دشوار' };
+
+let currentLevelIndex = 0;
+let currentQuestion = null;
+let answered = false;
+let nextAction = null;
+
+// ردگیری سوالات استفاده‌شده در هر سطح
+const usedQuestions = { easy: [], medium: [], hard: [] };
+
+// ================== توابع ==================
+function getRandomQuestion(level) {
+    const pool = questions.filter(q => q.level === level && !usedQuestions[level].includes(q));
+
+    if (pool.length === 0) {
+        usedQuestions[level] = [];
+        const freshPool = questions.filter(q => q.level === level);
+        const q = freshPool[Math.floor(Math.random() * freshPool.length)];
+        usedQuestions[level].push(q);
+        return q;
+    }
+
+    const q = pool[Math.floor(Math.random() * pool.length)];
+    usedQuestions[level].push(q);
+    return q;
+}
+
+function updateBadge(level) {
+    const badge = document.getElementById('levelBadge');
+    badge.className = 'level-badge level-' + level;
+    badge.textContent = 'سطح: ' + LEVEL_NAMES[level];
+}
+
+function updateCounter(level) {
+    const total = questions.filter(q => q.level === level).length;
+    const used = usedQuestions[level].length;
+    document.getElementById('counter').textContent = `سوال ${used} از ${total}`;
+}
+
+function renderQuestion() {
+    answered = false;
+    nextAction = null;
+
+    document.getElementById('feedback').textContent = '';
+    document.getElementById('feedback').className = 'feedback';
+    document.getElementById('solutionBox').classList.remove('show');
+    document.getElementById('solutionText').innerHTML = '';
+    document.getElementById('nextBtn').classList.remove('show');
+    document.getElementById('questionFigure').innerHTML = '';
+
+    const currentLevel = LEVELS[currentLevelIndex];
+    currentQuestion = getRandomQuestion(currentLevel);
+    updateBadge(currentLevel);
+    updateCounter(currentLevel);
+
+    if (!currentQuestion) {
+        document.getElementById('questionText').textContent = 'آزمون تمام شد! 🎉';
+        document.getElementById('optionsContainer').innerHTML = '';
+        document.getElementById('counter').textContent = '';
+        return;
+    }
+
+    document.getElementById('questionText').innerHTML = currentQuestion.text;
+
+    // اضافه کردن شکل (اگر وجود داشته باشد)
+    if (currentQuestion.figure) {
+        document.getElementById('questionFigure').innerHTML = currentQuestion.figure;
+    }
+
+    const container = document.getElementById('optionsContainer');
+    container.innerHTML = '';
+
+    currentQuestion.options.forEach((opt, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = opt;
+        btn.onclick = () => checkAnswer(index, btn);
+        container.appendChild(btn);
+    });
+}
+
+function checkAnswer(selectedIndex, btn) {
+    if (answered) return;
+    answered = true;
+
+    const allBtns = document.querySelectorAll('.option-btn');
+    allBtns.forEach(b => b.disabled = true);
+
+    const feedback = document.getElementById('feedback');
+    const solutionBox = document.getElementById('solutionBox');
+    const solutionText = document.getElementById('solutionText');
+    const nextBtn = document.getElementById('nextBtn');
+
+    const isCorrect = (selectedIndex === currentQuestion.correct);
+
+    if (isCorrect) {
+        btn.classList.add('correct');
+        feedback.textContent = '✅ آفرین! پاسخ صحیح بود.';
+        feedback.className = 'feedback correct';
+    } else {
+        btn.classList.add('wrong');
+        allBtns[currentQuestion.correct].classList.add('correct');
+        feedback.textContent = '❌ پاسخ نادرست بود. راهنمای حل را ببین و سپس ادامه بده.';
+        feedback.className = 'feedback wrong';
+    }
+
+    solutionText.innerHTML = currentQuestion.solution;
+    solutionBox.classList.add('show');
+
+    const currentLevel = LEVELS[currentLevelIndex];
+    const totalInLevel = questions.filter(q => q.level === currentLevel).length;
+
+    if (isCorrect) {
+        if (usedQuestions[currentLevel].length >= totalInLevel) {
+            if (currentLevelIndex < LEVELS.length - 1) {
+                nextAction = () => {
+                    currentLevelIndex++;
+                    renderQuestion();
+                };
+                nextBtn.textContent = 'ورود به سطح بالاتر ⬆';
+            } else {
+                nextAction = showFinish;
+                nextBtn.textContent = 'پایان آزمون 🎉';
+            }
+        } else {
+            nextAction = () => renderQuestion();
+            nextBtn.textContent = 'سوال بعدی ➡';
+        }
+    } else {
+        nextAction = () => renderQuestion();
+        nextBtn.textContent = 'تلاش دوباره از همین سطح 🔄';
+    }
+
+    nextBtn.classList.add('show');
+}
+
+function showFinish() {
+    document.getElementById('quizContainer').innerHTML = `
+        <div class="finished">
+            <h2>🎉 تبریک!</h2>
+            <p>شما تمام سوالات آزمون را در سه سطح آسان، متوسط و دشوار با موفقیت پشت سر گذاشتید.</p>
+            <p style="margin-top:20px;">🌟 آفرین بر تلاش و پشتکار شما!</p>
+        </div>
+    `;
+}
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+    if (nextAction) nextAction();
+});
+
+// شروع آزمون
+renderQuestion();
+</script>
+
+</body>
+</html>
